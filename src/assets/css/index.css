@@ -20,14 +20,10 @@
   }
   
   .btn-primary {
-    @apply btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+    @apply btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-wait;
   }
   
   .btn-secondary {
     @apply btn bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-500;
-  }
-  
-  .btn-disabled {
-    @apply btn bg-gray-300 text-gray-500 cursor-not-allowed;
   }
 }

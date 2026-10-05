@@ -30,7 +30,8 @@ A complete form-based React application for HR or team leads to onboard new empl
 - Field-level and step-level validation using Zod
 - Navigation between form steps (Next/Previous buttons)
 - File upload preview
-- Submit button only enabled if all validations pass
+- Validation on Next/Submit: every missing field is flagged at once and focus moves to the first one, with errors linked to their inputs for screen readers
+- Username availability confirmed before submitting; a taken name is flagged on the field. Stale responses are ignored, and if a check for the same name is already running, Submit waits for it instead of sending a second request
 - Form summary on submission
 - Draft saved to localStorage and restored on reload (password and profile picture are never stored)
 - Mock API for submission and username availability (no backend required)
@@ -66,6 +67,14 @@ npm run dev
 
 5. Open your browser and navigate to http://localhost:3000
 
+### Running Tests
+
+```
+npm test
+```
+
+The tests use Vitest and React Testing Library. They check that empty dates are rejected, that clicking Next or Submit flags missing fields and focuses the first one, that a taken username blocks submission, that clicking Submit during a username check reuses it rather than sending a second request, that the account setup fields reach the API on submit, and that the exported JSON leaves out the password.
+
 ## Tech Stack
 
 - **Frontend Framework**: React.js
@@ -74,6 +83,7 @@ npm run dev
 - **Styling**: Tailwind CSS
 - **Date Picker**: React Datepicker
 - **Storage**: Local Storage
+- **Testing**: Vitest, React Testing Library
 
 ## Project Structure
 
@@ -100,6 +110,8 @@ employee-onboarding-form/
 │   │   ├── validationSchema.js         # Zod schema for each step
 │   │   ├── storage.js                  # localStorage draft save/restore
 │   │   └── mockApi.js                  # Simulated submit and username check
+│   ├── test/
+│   │   └── setup.js                    # Test setup (jest-dom matchers, cleanup)
 │   ├── App.jsx                         # Step navigation and shared form state
 │   └── main.jsx
 ├── index.html
@@ -109,6 +121,8 @@ employee-onboarding-form/
 ├── vite.config.js
 └── README.md
 ```
+
+Test files (`*.test.js`, `*.test.jsx`) sit next to the code they test.
 
 ## Deployment
 

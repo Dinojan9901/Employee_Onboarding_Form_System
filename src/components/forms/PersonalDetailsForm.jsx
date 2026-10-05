@@ -1,19 +1,16 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { personalDetailsSchema } from '../../utils/validationSchema';
+import { fieldErrorProps } from '../../utils/fieldErrorProps';
 
 const PersonalDetailsForm = ({ formData, updateFormData, nextStep, formErrors, setFormErrors }) => {
-  const [dob, setDob] = useState(formData.dateOfBirth);
-  
-  const { 
-    register, 
-    handleSubmit, 
-    formState: { errors, isValid },
-    setValue,
-    trigger
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors }
   } = useForm({
     resolver: zodResolver(personalDetailsSchema),
     mode: 'onChange',
@@ -26,20 +23,16 @@ const PersonalDetailsForm = ({ formData, updateFormData, nextStep, formErrors, s
     }
   });
 
+  // Next is always clickable: handleSubmit validates every field, shows all the
+  // messages at once and focuses the first invalid field
   const onSubmit = (data) => {
-    updateFormData({ ...data, dateOfBirth: dob });
+    updateFormData(data);
     setFormErrors(prev => ({ ...prev, personalDetails: null }));
     nextStep();
   };
 
-  const handleDateChange = (date) => {
-    setDob(date);
-    setValue('dateOfBirth', date);
-    trigger('dateOfBirth');
-  };
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <div className="mb-4">
         <label htmlFor="fullName" className="form-label">
           Full Name
@@ -48,24 +41,37 @@ const PersonalDetailsForm = ({ formData, updateFormData, nextStep, formErrors, s
           type="text"
           id="fullName"
           {...register('fullName')}
+          {...fieldErrorProps(errors, 'fullName')}
           className="form-input"
           placeholder="Enter your full name"
         />
-        {errors.fullName && <p className="form-error">{errors.fullName.message}</p>}
+        {errors.fullName && <p id="fullName-error" className="form-error">{errors.fullName.message}</p>}
       </div>
 
       <div className="mb-4">
-        <label className="form-label">Date of Birth</label>
-        <DatePicker
-          selected={dob}
-          onChange={handleDateChange}
-          className="form-input"
-          placeholderText="Select your date of birth"
-          maxDate={new Date()}
-          showYearDropdown
-          dateFormat="MM/dd/yyyy"
+        <label htmlFor="dateOfBirth" className="form-label">Date of Birth</label>
+        <Controller
+          name="dateOfBirth"
+          control={control}
+          render={({ field }) => (
+            <DatePicker
+              id="dateOfBirth"
+              // react-datepicker exposes setFocus() rather than focus()
+              ref={(picker) => field.ref(picker && { focus: () => picker.setFocus() })}
+              selected={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              ariaInvalid={String(Boolean(errors.dateOfBirth))}
+              ariaDescribedBy={errors.dateOfBirth ? 'dateOfBirth-error' : undefined}
+              className="form-input"
+              placeholderText="Select your date of birth"
+              maxDate={new Date()}
+              showYearDropdown
+              dateFormat="MM/dd/yyyy"
+            />
+          )}
         />
-        {errors.dateOfBirth && <p className="form-error">{errors.dateOfBirth.message}</p>}
+        {errors.dateOfBirth && <p id="dateOfBirth-error" className="form-error">{errors.dateOfBirth.message}</p>}
       </div>
 
       <div className="mb-4">
@@ -77,6 +83,7 @@ const PersonalDetailsForm = ({ formData, updateFormData, nextStep, formErrors, s
               id="male"
               value="male"
               {...register('gender')}
+              {...fieldErrorProps(errors, 'gender')}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="male" className="ml-2 text-gray-700">
@@ -89,6 +96,7 @@ const PersonalDetailsForm = ({ formData, updateFormData, nextStep, formErrors, s
               id="female"
               value="female"
               {...register('gender')}
+              {...fieldErrorProps(errors, 'gender')}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="female" className="ml-2 text-gray-700">
@@ -101,6 +109,7 @@ const PersonalDetailsForm = ({ formData, updateFormData, nextStep, formErrors, s
               id="other"
               value="other"
               {...register('gender')}
+              {...fieldErrorProps(errors, 'gender')}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="other" className="ml-2 text-gray-700">
@@ -108,7 +117,7 @@ const PersonalDetailsForm = ({ formData, updateFormData, nextStep, formErrors, s
             </label>
           </div>
         </div>
-        {errors.gender && <p className="form-error">{errors.gender.message}</p>}
+        {errors.gender && <p id="gender-error" className="form-error">{errors.gender.message}</p>}
       </div>
 
       <div className="mb-4">
@@ -119,10 +128,11 @@ const PersonalDetailsForm = ({ formData, updateFormData, nextStep, formErrors, s
           type="tel"
           id="phoneNumber"
           {...register('phoneNumber')}
+          {...fieldErrorProps(errors, 'phoneNumber')}
           className="form-input"
           placeholder="Enter your 10-digit phone number"
         />
-        {errors.phoneNumber && <p className="form-error">{errors.phoneNumber.message}</p>}
+        {errors.phoneNumber && <p id="phoneNumber-error" className="form-error">{errors.phoneNumber.message}</p>}
       </div>
 
       <div className="mb-6">
@@ -133,18 +143,15 @@ const PersonalDetailsForm = ({ formData, updateFormData, nextStep, formErrors, s
           type="email"
           id="email"
           {...register('email')}
+          {...fieldErrorProps(errors, 'email')}
           className="form-input"
           placeholder="Enter your email address"
         />
-        {errors.email && <p className="form-error">{errors.email.message}</p>}
+        {errors.email && <p id="email-error" className="form-error">{errors.email.message}</p>}
       </div>
 
       <div className="mt-6 flex justify-end">
-        <button 
-          type="submit" 
-          className={isValid ? "btn-primary" : "btn-disabled"}
-          disabled={!isValid}
-        >
+        <button type="submit" className="btn-primary">
           Next
         </button>
       </div>

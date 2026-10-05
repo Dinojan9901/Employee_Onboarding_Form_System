@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { departments } from '../../utils/departments';
 
 const FormSummary = ({ formData, onReset }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -51,7 +52,7 @@ const FormSummary = ({ formData, onReset }) => {
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
             <p className="text-sm text-gray-500">Department</p>
-            <p className="font-medium">{formData.department ? formData.department.charAt(0).toUpperCase() + formData.department.slice(1).replace('_', ' ') : "Not provided"}</p>
+            <p className="font-medium">{(formData.department && departments.find(dept => dept.value === formData.department)?.label) || "Not provided"}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Role</p>

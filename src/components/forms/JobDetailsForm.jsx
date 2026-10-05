@@ -1,19 +1,17 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { jobDetailsSchema } from '../../utils/validationSchema';
+import { fieldErrorProps } from '../../utils/fieldErrorProps';
+import { departments } from '../../utils/departments';
 
 const JobDetailsForm = ({ formData, updateFormData, nextStep, prevStep, formErrors, setFormErrors }) => {
-  const [joiningDate, setJoiningDate] = useState(formData.joiningDate);
-  
-  const { 
-    register, 
-    handleSubmit, 
-    formState: { errors, isValid },
-    setValue,
-    trigger
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors }
   } = useForm({
     resolver: zodResolver(jobDetailsSchema),
     mode: 'onChange',
@@ -25,32 +23,16 @@ const JobDetailsForm = ({ formData, updateFormData, nextStep, prevStep, formErro
     }
   });
 
+  // Next is always clickable: handleSubmit validates every field, shows all the
+  // messages at once and focuses the first invalid field
   const onSubmit = (data) => {
-    updateFormData({ ...data, joiningDate });
+    updateFormData(data);
     setFormErrors(prev => ({ ...prev, jobDetails: null }));
     nextStep();
   };
 
-  const handleDateChange = (date) => {
-    setJoiningDate(date);
-    setValue('joiningDate', date);
-    trigger('joiningDate');
-  };
-
-  const departments = [
-    { value: '', label: 'Select Department' },
-    { value: 'engineering', label: 'Engineering' },
-    { value: 'product', label: 'Product' },
-    { value: 'marketing', label: 'Marketing' },
-    { value: 'sales', label: 'Sales' },
-    { value: 'finance', label: 'Finance' },
-    { value: 'hr', label: 'Human Resources' },
-    { value: 'operations', label: 'Operations' },
-    { value: 'customer_support', label: 'Customer Support' },
-  ];
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <div className="mb-4">
         <label htmlFor="department" className="form-label">
           Department
@@ -58,6 +40,7 @@ const JobDetailsForm = ({ formData, updateFormData, nextStep, prevStep, formErro
         <select
           id="department"
           {...register('department')}
+          {...fieldErrorProps(errors, 'department')}
           className="form-input"
         >
           {departments.map((dept) => (
@@ -66,7 +49,7 @@ const JobDetailsForm = ({ formData, updateFormData, nextStep, prevStep, formErro
             </option>
           ))}
         </select>
-        {errors.department && <p className="form-error">{errors.department.message}</p>}
+        {errors.department && <p id="department-error" className="form-error">{errors.department.message}</p>}
       </div>
 
       <div className="mb-4">
@@ -77,23 +60,36 @@ const JobDetailsForm = ({ formData, updateFormData, nextStep, prevStep, formErro
           type="text"
           id="role"
           {...register('role')}
+          {...fieldErrorProps(errors, 'role')}
           className="form-input"
           placeholder="Enter job role/title"
         />
-        {errors.role && <p className="form-error">{errors.role.message}</p>}
+        {errors.role && <p id="role-error" className="form-error">{errors.role.message}</p>}
       </div>
 
       <div className="mb-4">
-        <label className="form-label">Joining Date</label>
-        <DatePicker
-          selected={joiningDate}
-          onChange={handleDateChange}
-          className="form-input"
-          placeholderText="Select joining date"
-          dateFormat="MM/dd/yyyy"
-          minDate={new Date()}
+        <label htmlFor="joiningDate" className="form-label">Joining Date</label>
+        <Controller
+          name="joiningDate"
+          control={control}
+          render={({ field }) => (
+            <DatePicker
+              id="joiningDate"
+              // react-datepicker exposes setFocus() rather than focus()
+              ref={(picker) => field.ref(picker && { focus: () => picker.setFocus() })}
+              selected={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              ariaInvalid={String(Boolean(errors.joiningDate))}
+              ariaDescribedBy={errors.joiningDate ? 'joiningDate-error' : undefined}
+              className="form-input"
+              placeholderText="Select joining date"
+              dateFormat="MM/dd/yyyy"
+              minDate={new Date()}
+            />
+          )}
         />
-        {errors.joiningDate && <p className="form-error">{errors.joiningDate.message}</p>}
+        {errors.joiningDate && <p id="joiningDate-error" className="form-error">{errors.joiningDate.message}</p>}
       </div>
 
       <div className="mb-6">
@@ -104,25 +100,22 @@ const JobDetailsForm = ({ formData, updateFormData, nextStep, prevStep, formErro
           type="text"
           id="workLocation"
           {...register('workLocation')}
+          {...fieldErrorProps(errors, 'workLocation')}
           className="form-input"
           placeholder="Enter work location"
         />
-        {errors.workLocation && <p className="form-error">{errors.workLocation.message}</p>}
+        {errors.workLocation && <p id="workLocation-error" className="form-error">{errors.workLocation.message}</p>}
       </div>
 
       <div className="mt-6 flex justify-between">
-        <button 
-          type="button" 
+        <button
+          type="button"
           onClick={prevStep}
           className="btn-secondary"
         >
           Previous
         </button>
-        <button 
-          type="submit" 
-          className={isValid ? "btn-primary" : "btn-disabled"}
-          disabled={!isValid}
-        >
+        <button type="submit" className="btn-primary">
           Next
         </button>
       </div>

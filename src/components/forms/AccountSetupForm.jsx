@@ -4,18 +4,24 @@ import PasswordStrengthMeter from '../ui/PasswordStrengthMeter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { accountSetupSchema } from '../../utils/validationSchema';
+import { fieldErrorProps } from '../../utils/fieldErrorProps';
 
 const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFormErrors }) => {
   const [profileImage, setProfileImage] = useState(formData.profilePicture);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const fileInputRef = useRef(null);
+  // The username check currently in flight, so Submit can wait for it instead of
+  // sending a second request for the same name
+  const pendingCheckRef = useRef(null);
   
   const { 
     register, 
     handleSubmit: handleFormSubmit, 
-    formState: { errors, isValid },
-    watch
+    formState: { errors, isSubmitting },
+    watch,
+    setError,
+    setFocus
   } = useForm({
     resolver: zodResolver(accountSetupSchema),
     mode: 'onChange',
@@ -28,13 +34,23 @@ const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFor
   });
 
   const passwordValue = watch('password');
-  const acceptTermsValue = watch('acceptTerms');
   const usernameValue = watch('username');
+
+  const checkUsername = (username) => {
+    const pending = pendingCheckRef.current;
+    if (pending && pending.username === username) return pending.promise;
+
+    const promise = checkUsernameAvailability(username).finally(() => {
+      if (pendingCheckRef.current?.promise === promise) pendingCheckRef.current = null;
+    });
+    pendingCheckRef.current = { username, promise };
+    return promise;
+  };
   
   // Check username availability when user stops typing
   useEffect(() => {
     // Forget the previous result straight away, so a name that was available can't
-    // keep the submit button enabled while the new one is still being checked
+    // be submitted under a new name that hasn't been checked yet
     setUsernameAvailable(null);
     setCheckingUsername(false);
 
@@ -48,7 +64,7 @@ const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFor
     const timeoutId = setTimeout(async () => {
       setCheckingUsername(true);
       try {
-        const result = await checkUsernameAvailability(usernameValue);
+        const result = await checkUsername(usernameValue);
         if (!cancelled) setUsernameAvailable(result.available);
       } catch (error) {
         console.error('Error checking username:', error);
@@ -63,7 +79,28 @@ const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFor
     };
   }, [usernameValue]);
 
-  const onSubmit = (data) => {
+  // Submit is always clickable: handleSubmit validates every field, shows all the
+  // messages at once and focuses the first invalid field. Only then is the username
+  // confirmed, since the live check may not have run yet for the latest value.
+  const onSubmit = async (data) => {
+    let available = usernameAvailable;
+    if (available === null) {
+      try {
+        available = (await checkUsername(data.username)).available;
+      } catch (error) {
+        console.error('Error checking username:', error);
+        setError('username', { type: 'check', message: 'Could not check username availability. Please try again.' });
+        setFocus('username');
+        return;
+      }
+    }
+
+    if (!available) {
+      setError('username', { type: 'taken', message: 'This username is already taken.' });
+      setFocus('username');
+      return;
+    }
+
     setFormErrors(prev => ({ ...prev, accountSetup: null }));
     handleSubmit({ ...data, profilePicture: profileImage });
   };
@@ -80,7 +117,7 @@ const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFor
   };
 
   return (
-    <form onSubmit={handleFormSubmit(onSubmit)}>
+    <form onSubmit={handleFormSubmit(onSubmit)} noValidate>
       <div className="mb-4">
         <label htmlFor="username" className="form-label">
           Username
@@ -90,6 +127,8 @@ const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFor
             type="text"
             id="username"
             {...register('username')}
+            aria-invalid={Boolean(errors.username) || usernameAvailable === false}
+            aria-describedby={errors.username || usernameAvailable === false ? 'username-error' : undefined}
             className={`form-input ${usernameAvailable === false ? 'border-red-500' : usernameAvailable === true ? 'border-green-500' : ''}`}
             placeholder="Choose a username"
           />
@@ -116,9 +155,9 @@ const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFor
             </div>
           )}
         </div>
-        {errors.username && <p className="form-error">{errors.username.message}</p>}
+        {errors.username && <p id="username-error" className="form-error">{errors.username.message}</p>}
         {!errors.username && usernameAvailable === false && (
-          <p className="form-error">This username is already taken.</p>
+          <p id="username-error" className="form-error">This username is already taken.</p>
         )}
         {!errors.username && usernameAvailable === true && (
           <p className="text-sm text-green-600">Username is available!</p>
@@ -133,10 +172,11 @@ const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFor
           type="password"
           id="password"
           {...register('password')}
+          {...fieldErrorProps(errors, 'password')}
           className="form-input"
           placeholder="Create a password"
         />
-        {errors.password && <p className="form-error">{errors.password.message}</p>}
+        {errors.password && <p id="password-error" className="form-error">{errors.password.message}</p>}
         
         {passwordValue && <PasswordStrengthMeter password={passwordValue} />}
         
@@ -191,6 +231,7 @@ const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFor
               id="acceptTerms"
               type="checkbox"
               {...register('acceptTerms')}
+              {...fieldErrorProps(errors, 'acceptTerms')}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
           </div>
@@ -211,10 +252,10 @@ const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFor
             </p>
           </div>
         </div>
-        {errors.acceptTerms && <p className="form-error">{errors.acceptTerms.message}</p>}
+        {errors.acceptTerms && <p id="acceptTerms-error" className="form-error">{errors.acceptTerms.message}</p>}
       </div>
 
-      <div className="mt-6 flex justify-between">
+      <div className="mt-6 flex justify-between items-center">
         <button 
           type="button" 
           onClick={prevStep}
@@ -222,13 +263,15 @@ const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFor
         >
           Previous
         </button>
-        <button 
-          type="submit" 
-          className={isValid && acceptTermsValue && usernameAvailable === true ? "btn-primary" : "btn-disabled"}
-          disabled={!isValid || !acceptTermsValue || usernameAvailable !== true}
-        >
-          Submit
-        </button>
+        <div className="flex items-center gap-3">
+          <p role="status" className="text-sm text-gray-600">
+            {isSubmitting ? 'Checking username…' : ''}
+          </p>
+          {/* Disabled only while a submission is in progress, to prevent sending it twice */}
+          <button type="submit" className="btn-primary" disabled={isSubmitting} aria-busy={isSubmitting}>
+            Submit
+          </button>
+        </div>
       </div>
     </form>
   );

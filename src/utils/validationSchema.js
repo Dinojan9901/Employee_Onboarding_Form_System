@@ -6,7 +6,7 @@ export const personalDetailsSchema = z.object({
   dateOfBirth: z.instanceof(Date, { message: "Date of birth is required" }),
   gender: z.string().min(1, "Gender selection is required"),
   phoneNumber: z.string().regex(/^\d{10}$/, "Phone number must be 10 digits"),
-  email: z.string().email("Invalid email format"),
+  email: z.string().min(1, "Email is required").email("Invalid email format"),
 });
 
 // Job Details Schema
