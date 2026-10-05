@@ -5,11 +5,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { accountSetupSchema } from '../../utils/validationSchema';
 
-const AccountSetupForm = ({ formData, updateFormData, prevStep, handleSubmit, formErrors, setFormErrors }) => {
+const AccountSetupForm = ({ formData, prevStep, handleSubmit, formErrors, setFormErrors }) => {
   const [profileImage, setProfileImage] = useState(formData.profilePicture);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(null);
-  const [typingTimeout, setTypingTimeout] = useState(null);
   const fileInputRef = useRef(null);
   
   const { 
@@ -34,45 +33,39 @@ const AccountSetupForm = ({ formData, updateFormData, prevStep, handleSubmit, fo
   
   // Check username availability when user stops typing
   useEffect(() => {
+    // Forget the previous result straight away, so a name that was available can't
+    // keep the submit button enabled while the new one is still being checked
+    setUsernameAvailable(null);
+    setCheckingUsername(false);
+
     if (!usernameValue || usernameValue.length < 4) {
-      setUsernameAvailable(null);
       return;
     }
-    
-    // Clear any existing timeout
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
-    }
-    
-    // Set a new timeout
+
+    // Set when the username changes again, so a slow response for an older value is ignored
+    let cancelled = false;
+
     const timeoutId = setTimeout(async () => {
       setCheckingUsername(true);
       try {
         const result = await checkUsernameAvailability(usernameValue);
-        setUsernameAvailable(result.available);
+        if (!cancelled) setUsernameAvailable(result.available);
       } catch (error) {
         console.error('Error checking username:', error);
-        setUsernameAvailable(null);
       } finally {
-        setCheckingUsername(false);
+        if (!cancelled) setCheckingUsername(false);
       }
     }, 500); // Wait 500ms after user stops typing
-    
-    setTypingTimeout(timeoutId);
-    
-    // Cleanup function
+
     return () => {
-      if (typingTimeout) {
-        clearTimeout(typingTimeout);
-      }
+      cancelled = true;
+      clearTimeout(timeoutId);
     };
   }, [usernameValue]);
 
   const onSubmit = (data) => {
-    const updatedData = { ...data, profilePicture: profileImage };
-    updateFormData(updatedData);
     setFormErrors(prev => ({ ...prev, accountSetup: null }));
-    handleSubmit();
+    handleSubmit({ ...data, profilePicture: profileImage });
   };
 
   const handleImageChange = (e) => {
@@ -231,8 +224,8 @@ const AccountSetupForm = ({ formData, updateFormData, prevStep, handleSubmit, fo
         </button>
         <button 
           type="submit" 
-          className={isValid && acceptTermsValue && usernameAvailable !== false ? "btn-primary" : "btn-disabled"}
-          disabled={!isValid || !acceptTermsValue || usernameAvailable === false}
+          className={isValid && acceptTermsValue && usernameAvailable === true ? "btn-primary" : "btn-disabled"}
+          disabled={!isValid || !acceptTermsValue || usernameAvailable !== true}
         >
           Submit
         </button>

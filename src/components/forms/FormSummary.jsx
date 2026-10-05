@@ -108,8 +108,10 @@ const FormSummary = ({ formData, onReset }) => {
             
             <button 
               onClick={() => {
-                // Generate a JSON file for download
-                const dataStr = JSON.stringify(formData, null, 2);
+                // Generate a JSON file for download, leaving out the password so it
+                // never ends up in a plain-text file
+                const { password, ...exportData } = formData;
+                const dataStr = JSON.stringify(exportData, null, 2);
                 const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
                 
                 const exportFileDefaultName = 'employee-data.json';

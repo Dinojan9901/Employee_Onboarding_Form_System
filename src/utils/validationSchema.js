@@ -3,7 +3,7 @@ import { z } from 'zod';
 // Personal Details Schema
 export const personalDetailsSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
-  dateOfBirth: z.instanceof(Date, { message: "Date of birth is required" }).nullable(),
+  dateOfBirth: z.instanceof(Date, { message: "Date of birth is required" }),
   gender: z.string().min(1, "Gender selection is required"),
   phoneNumber: z.string().regex(/^\d{10}$/, "Phone number must be 10 digits"),
   email: z.string().email("Invalid email format"),
@@ -13,7 +13,7 @@ export const personalDetailsSchema = z.object({
 export const jobDetailsSchema = z.object({
   department: z.string().min(1, "Department selection is required"),
   role: z.string().min(2, "Role is required"),
-  joiningDate: z.instanceof(Date, { message: "Joining date is required" }).nullable(),
+  joiningDate: z.instanceof(Date, { message: "Joining date is required" }),
   workLocation: z.string().min(2, "Work location is required"),
 });
 

@@ -65,10 +65,16 @@ function App() {
     setCurrentStep(prev => prev - 1);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (stepData) => {
+    // Merge the final step here rather than reading formData after a setFormData call:
+    // state updates aren't applied until the next render, so formData would still be
+    // missing the account setup fields.
+    const submission = { ...formData, ...stepData };
+    setFormData(submission);
+
     // Save to localStorage first as a backup
-    saveFormData(formData);
-    
+    saveFormData(submission);
+
     // Reset states
     setSubmitError(null);
     setSubmitSuccess(null);
@@ -76,7 +82,7 @@ function App() {
     
     try {
       // Call mock API service to simulate form submission
-      const response = await submitEmployeeData(formData);
+      const response = await submitEmployeeData(submission);
       
       if (response.success) {
         setSubmitSuccess(response.message);
@@ -139,10 +145,9 @@ function App() {
     },
     {
       title: 'Account Setup',
-      component: <AccountSetupForm 
-                   formData={formData} 
-                   updateFormData={updateFormData} 
-                   prevStep={prevStep} 
+      component: <AccountSetupForm
+                   formData={formData}
+                   prevStep={prevStep}
                    handleSubmit={handleSubmit}
                    formErrors={formErrors}
                    setFormErrors={setFormErrors}

@@ -6,11 +6,18 @@ const STORAGE_KEY = 'employeeOnboardingData';
 
 /**
  * Save form data to local storage
+ *
+ * The password is never persisted: localStorage is plain text and readable by any
+ * script on the page. The profile picture is also left out, because its base64 data
+ * URL can exceed the ~5 MB localStorage quota and make the whole draft fail to save.
+ * Both fields are blanked rather than removed so a restored draft keeps its shape.
+ *
  * @param {Object} data - The form data to save
  */
 export const saveFormData = (data) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const draft = { ...data, password: '', profilePicture: null };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
     return true;
   } catch (error) {
     console.error('Error saving form data to localStorage:', error);

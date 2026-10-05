@@ -32,7 +32,8 @@ A complete form-based React application for HR or team leads to onboard new empl
 - File upload preview
 - Submit button only enabled if all validations pass
 - Form summary on submission
-- Data saved to localStorage
+- Draft saved to localStorage and restored on reload (password and profile picture are never stored)
+- Mock API for submission and username availability (no backend required)
 - Responsive design using Tailwind CSS
 
 ## Setup Instructions
@@ -79,22 +80,27 @@ npm run dev
 ```
 employee-onboarding-form/
 ├── public/
-│   └── favicon.ico
+│   └── favicon.svg
 ├── src/
 │   ├── assets/
 │   │   └── css/
-│   │       └── index.css
+│   │       └── index.css               # Tailwind directives and shared form/button classes
 │   ├── components/
 │   │   ├── forms/
-│   │   │   ├── PersonalDetailsForm.jsx
-│   │   │   ├── JobDetailsForm.jsx
-│   │   │   ├── AccountSetupForm.jsx
-│   │   │   └── FormSummary.jsx
+│   │   │   ├── PersonalDetailsForm.jsx # Step 1
+│   │   │   ├── JobDetailsForm.jsx      # Step 2
+│   │   │   ├── AccountSetupForm.jsx    # Step 3, with live username availability check
+│   │   │   └── FormSummary.jsx         # Summary, JSON export and reset after submission
 │   │   └── ui/
-│   │       └── ProgressBar.jsx
+│   │       ├── Header.jsx
+│   │       ├── FormStepIndicator.jsx   # Step circles (tablet and desktop)
+│   │       ├── ProgressBar.jsx
+│   │       └── PasswordStrengthMeter.jsx
 │   ├── utils/
-│   │   └── validationSchema.js
-│   ├── App.jsx
+│   │   ├── validationSchema.js         # Zod schema for each step
+│   │   ├── storage.js                  # localStorage draft save/restore
+│   │   └── mockApi.js                  # Simulated submit and username check
+│   ├── App.jsx                         # Step navigation and shared form state
 │   └── main.jsx
 ├── index.html
 ├── package.json
